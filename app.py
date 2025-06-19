@@ -62,18 +62,25 @@ if uploaded_file:
       # --- Prediksi ---
 df['prediksi'] = model.predict(df_features)
 
+# --- Prediksi ---
+df['prediksi'] = model.predict(df_features)
+
+# 👇 Tambahan: tampilkan distribusi prediksi
+st.subheader("🔎 Distribusi Prediksi")
+st.write(df['prediksi'].value_counts())
+st.bar_chart(df['prediksi'].value_counts())
+
+# Tampilkan seluruh hasil
 st.success("✅ Prediksi selesai.")
 st.dataframe(df[['nama_dokter', 'kota', 'spesialisasi', 'prediksi']])
 
-# Tambahan: tampilkan hanya dokter yang beli
+# Tampilkan hanya dokter yang beli
 df_beli = df[df['prediksi'] == 1]
-
 st.subheader("🧾 Dokter yang Diprediksi Akan Membeli")
 if df_beli.empty:
     st.warning("Tidak ada dokter yang diprediksi akan membeli.")
 else:
     st.dataframe(df_beli[['nama_dokter', 'kota', 'spesialisasi', 'nilai_sponsor_juta_rp', 'prediksi']])
-
     csv_beli = df_beli.to_csv(index=False).encode('utf-8')
     st.download_button("⬇️ Download hanya dokter yang beli", data=csv_beli, file_name="dokter_yang_beli.csv", mime='text/csv')
 
