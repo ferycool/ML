@@ -77,6 +77,12 @@ if uploaded_file:
             st.warning("Tidak ada dokter yang diprediksi akan membeli.")
         else:
             st.dataframe(df_beli[['nama_dokter', 'kota', 'spesialisasi', 'nilai_sponsor_juta_rp', 'prediksi']])
-            csv_beli = df_beli.to_csv(index=False).encode('utf-8')
-            st.download_button("⬇️ Download hanya dokter yang beli", data=csv_beli,
-                               file_na_
+
+csv_beli = df_beli.to_csv(index=False).encode('utf-8')
+
+st.download_button(
+    label="⬇️ Download hanya dokter yang beli",
+    data=csv_beli,
+    file_name="dokter_beli.csv",
+    mime="text/csv"
+)
