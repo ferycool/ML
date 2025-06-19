@@ -8,21 +8,8 @@ def load_model():
 
 model = load_model()
 
-# Fitur yang digunakan saat training
-used_features = [
-    'tahun_praktik',
-    'jumlah_kunjungan_3_bulan_terakhir',
-    'ikut_webinar_terakhir',
-    'nilai_sponsor_juta_rp',
-    'total_pembelian_tahun_lalu_juta_rp',  # ✅ Tambahan wajib
-    'kota_Bandung', 'kota_Jakarta', 'kota_Medan', 'kota_Semarang', 'kota_Surabaya', 'kota_Yogyakarta',
-    'spesialisasi_Anak', 'spesialisasi_Jantung', 'spesialisasi_Kandungan', 'spesialisasi_Kulit',
-    'spesialisasi_Paru', 'spesialisasi_THT', 'spesialisasi_Umum',
-    'tipe_rumah_sakit_Klinik Mandiri', 'tipe_rumah_sakit_Pemerintah', 'tipe_rumah_sakit_Swasta Tipe A'
-]
-
 st.title("🧠 Prediksi Dokter yang Akan Membeli")
-st.write("Upload data CSV atau Excel (.csv / .xlsx) dari dokter baru untuk diprediksi siapa yang berpotensi membeli.")
+st.write("Upload file CSV atau Excel berisi data dokter baru untuk memprediksi siapa yang berpotensi membeli.")
 
 uploaded_file = st.file_uploader("📂 Upload file CSV/XLSX", type=["csv", "xlsx"])
 
@@ -34,7 +21,7 @@ if uploaded_file:
         else:
             df = pd.read_csv(uploaded_file)
 
-        # Ganti nama kolom jika perlu (mapping untuk cocok dengan model)
+        # Rename kolom agar sesuai jika perlu
         df.rename(columns={
             '_3_bulan_terakhir': 'jumlah_kunjungan_3_bulan_terakhir'
         }, inplace=True)
@@ -45,43 +32,45 @@ if uploaded_file:
         # --- Preprocessing ---
         df_clean = df.copy()
 
-        # Format koma ke float
+        # Ubah koma jadi titik (format angka)
         df_clean['nilai_sponsor_juta_rp'] = df_clean['nilai_sponsor_juta_rp'].astype(str).str.replace(",", ".").astype(float)
         df_clean['total_pembelian_tahun_lalu_juta_rp'] = df_clean['total_pembelian_tahun_lalu_juta_rp'].astype(str).str.replace(",", ".").astype(float)
 
-        # One-hot encoding kategori
+        # One-hot encoding untuk kolom kategorikal
         kota_encoded = pd.get_dummies(df_clean['kota'], prefix='kota')
         spes_encoded = pd.get_dummies(df_clean['spesialisasi'], prefix='spesialisasi')
         rs_encoded = pd.get_dummies(df_clean['tipe_rumah_sakit'], prefix='tipe_rumah_sakit')
 
         df_features = pd.concat([
-            df_clean[['tahun_praktik', 'jumlah_kunjungan_3_bulan_terakhir',
-                      'ikut_webinar_terakhir', 'nilai_sponsor_juta_rp',
-                      'total_pembelian_tahun_lalu_juta_rp']],
+            df_clean[['tahun_praktik', 'jumlah_kunjungan_3_bulan_terakhir', 'ikut_webinar_terakhir',
+                      'nilai_sponsor_juta_rp', 'total_pembelian_tahun_lalu_juta_rp']],
             kota_encoded, spes_encoded, rs_encoded
         ], axis=1)
 
-        # Tambah kolom yang hilang
-        for col in used_features:
+        # Ambil daftar fitur dari model
+        expected_features = model.feature_names_in_
+
+        # Tambahkan kolom yang hilang agar sesuai
+        for col in expected_features:
             if col not in df_features.columns:
                 df_features[col] = 0
 
-        # Urutkan kolom sesuai training
-        df_features = df_features[used_features]
+        # Susun sesuai urutan saat model dilatih
+        df_features = df_features[expected_features]
 
         # --- Prediksi ---
         df['prediksi'] = model.predict(df_features)
 
-        # 🔍 Distribusi prediksi
+        # 🔍 Distribusi hasil prediksi
         st.subheader("🔎 Distribusi Prediksi")
         st.write(df['prediksi'].value_counts())
         st.bar_chart(df['prediksi'].value_counts())
 
-        # ✅ Tampilkan semua hasil
+        # ✅ Tampilkan semua data + prediksi
         st.success("✅ Prediksi selesai.")
         st.dataframe(df[['nama_dokter', 'kota', 'spesialisasi', 'nilai_sponsor_juta_rp', 'prediksi']])
 
-        # 🧾 Filter: dokter yang beli
+        # 🧾 Tampilkan dokter yang diprediksi akan beli
         df_beli = df[df['prediksi'] == 1]
         st.subheader("🧾 Dokter yang Diprediksi Akan Membeli")
         if df_beli.empty:
@@ -90,12 +79,4 @@ if uploaded_file:
             st.dataframe(df_beli[['nama_dokter', 'kota', 'spesialisasi', 'nilai_sponsor_juta_rp', 'prediksi']])
             csv_beli = df_beli.to_csv(index=False).encode('utf-8')
             st.download_button("⬇️ Download hanya dokter yang beli", data=csv_beli,
-                               file_name="dokter_yang_beli.csv", mime='text/csv')
-
-        # ⬇️ Download semua hasil
-        csv = df.to_csv(index=False).encode('utf-8')
-        st.download_button("⬇️ Download semua hasil", data=csv,
-                           file_name="prediksi_dokter.csv", mime='text/csv')
-
-    except Exception as e:
-        st.error(f"❌ Terjadi kesalahan saat memproses: {e}")
+                               file_na_
