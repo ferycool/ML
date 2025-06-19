@@ -8,57 +8,65 @@ def load_model():
 
 model = load_model()
 
-# Fitur yang digunakan saat pelatihan model
+# Fitur yang digunakan saat training
 used_features = [
-    'ikut_webinar_terakhir',
+    'tahun_praktik',
     'jumlah_kunjungan_3_bulan_terakhir',
+    'ikut_webinar_terakhir',
     'nilai_sponsor_juta_rp',
-    'kota_Yogyakarta', 'kota_Jakarta', 'kota_Makassar',
-    'spesialisasi_Jantung', 'spesialisasi_Anak', 'spesialisasi_Paru'
+    'kota_Bandung', 'kota_Jakarta', 'kota_Medan', 'kota_Semarang', 'kota_Surabaya', 'kota_Yogyakarta',
+    'spesialisasi_Anak', 'spesialisasi_Jantung', 'spesialisasi_Kandungan', 'spesialisasi_Kulit', 'spesialisasi_Paru', 'spesialisasi_THT', 'spesialisasi_Umum',
+    'tipe_rumah_sakit_Klinik Mandiri', 'tipe_rumah_sakit_Pemerintah', 'tipe_rumah_sakit_Swasta Tipe A'
 ]
 
-st.title("📊 Prediksi Risiko Dokter")
-uploaded_file = st.file_uploader("📂 Upload CSV data dokter", type="csv")
+st.title("🧠 Prediksi Dokter yang Akan Membeli")
+st.write("Upload data CSV dari dokter baru untuk diprediksi siapa yang berpotensi membeli.")
+
+uploaded_file = st.file_uploader("📂 Upload file CSV", type=["csv", "xlsx"])
 
 if uploaded_file:
     try:
-        df = pd.read_csv(uploaded_file)
+        if uploaded_file.name.endswith(".xlsx"):
+            df = pd.read_excel(uploaded_file)
+        else:
+            df = pd.read_csv(uploaded_file)
+
         st.write("📋 Data asli:")
         st.dataframe(df.head())
 
-        # Preprocessing:
-        df_encoded = df.copy()
+        # --- Preprocessing ---
+        df_clean = df.copy()
 
-        # One-hot encoding kota
-        kota_encoded = pd.get_dummies(df_encoded['kota'], prefix='kota')
-        # One-hot encoding spesialisasi
-        spek_encoded = pd.get_dummies(df_encoded['spesialisasi'], prefix='spesialisasi')
+        # Konversi nilai koma ke float
+        df_clean['nilai_sponsor_juta_rp'] = df_clean['nilai_sponsor_juta_rp'].str.replace(",", ".").astype(float)
+        df_clean['total_pembelian_tahun_lalu_juta_rp'] = df_clean['total_pembelian_tahun_lalu_juta_rp'].str.replace(",", ".").astype(float)
 
-        # Gabungkan semuanya
-        df_final = pd.concat([df_encoded, kota_encoded, spek_encoded], axis=1)
+        # One-hot encoding untuk kolom kategorikal
+        kota_encoded = pd.get_dummies(df_clean['kota'], prefix='kota')
+        spes_encoded = pd.get_dummies(df_clean['spesialisasi'], prefix='spesialisasi')
+        rs_encoded = pd.get_dummies(df_clean['tipe_rumah_sakit'], prefix='tipe_rumah_sakit')
 
-        # Drop kolom kategorikal asli (jika tidak digunakan langsung)
-        df_final = df_final.drop(columns=['kota', 'spesialisasi', 'nama_dokter', 'dokter_id'], errors='ignore')
+        # Gabungkan dengan data numerik
+        df_features = pd.concat([
+            df_clean[['tahun_praktik', 'jumlah_kunjungan_3_bulan_terakhir', 'ikut_webinar_terakhir', 'nilai_sponsor_juta_rp']],
+            kota_encoded, spes_encoded, rs_encoded
+        ], axis=1)
 
-        # Tambahkan fitur yang hilang dengan default 0
+        # Tambahkan fitur yang tidak muncul di data, isi dengan 0
         for col in used_features:
-            if col not in df_final.columns:
-                df_final[col] = 0
+            if col not in df_features.columns:
+                df_features[col] = 0
 
-        # Urutkan sesuai fitur pelatihan
-        df_final = df_final[used_features]
+        df_features = df_features[used_features]  # Urutkan sesuai fitur training
 
-        # Prediksi
-        pred = model.predict(df_final)
-        df['prediksi'] = pred
+        # --- Prediksi ---
+        df['prediksi'] = model.predict(df_features)
 
-        st.success("✅ Prediksi berhasil.")
-        st.dataframe(df)
+        st.success("✅ Prediksi selesai.")
+        st.dataframe(df[['nama_dokter', 'kota', 'spesialisasi', 'prediksi']])
 
         csv = df.to_csv(index=False).encode('utf-8')
-        st.download_button("⬇️ Download hasil prediksi", data=csv, file_name="hasil_prediksi.csv", mime='text/csv')
+        st.download_button("⬇️ Download hasil prediksi", data=csv, file_name="prediksi_dokter.csv", mime='text/csv')
 
     except Exception as e:
-        st.error(f"❌ Error saat memproses: {e}")
-
-
+        st.error(f"❌ Terjadi kesalahan saat memproses: {e}")
