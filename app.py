@@ -38,8 +38,8 @@ if uploaded_file:
         df_clean = df.copy()
 
         # Konversi nilai koma ke float
-        df_clean['nilai_sponsor_juta_rp'] = df_clean['nilai_sponsor_juta_rp'].str.replace(",", ".").astype(float)
-        df_clean['total_pembelian_tahun_lalu_juta_rp'] = df_clean['total_pembelian_tahun_lalu_juta_rp'].str.replace(",", ".").astype(float)
+        df_clean['nilai_sponsor_juta_rp'] = df_clean['nilai_sponsor_juta_rp'].astype(str).str.replace(",", ".").astype(float)
+        df_clean['total_pembelian_tahun_lalu_juta_rp'] = df_clean['total_pembelian_tahun_lalu_juta_rp'].astype(str).str.replace(",", ".").astype(float)
 
         # One-hot encoding untuk kolom kategorikal
         kota_encoded = pd.get_dummies(df_clean['kota'], prefix='kota')
@@ -57,33 +57,34 @@ if uploaded_file:
             if col not in df_features.columns:
                 df_features[col] = 0
 
-        df_features = df_features[used_features]  # Urutkan sesuai fitur training
+        # Urutkan sesuai fitur training
+        df_features = df_features[used_features]
 
-      # --- Prediksi ---
-df['prediksi'] = model.predict(df_features)
+        # --- Prediksi ---
+        df['prediksi'] = model.predict(df_features)
 
-# --- Prediksi ---
-df['prediksi'] = model.predict(df_features)
+        # Distribusi hasil prediksi
+        st.subheader("🔎 Distribusi Prediksi")
+        st.write(df['prediksi'].value_counts())
+        st.bar_chart(df['prediksi'].value_counts())
 
-# 👇 Tambahan: tampilkan distribusi prediksi
-st.subheader("🔎 Distribusi Prediksi")
-st.write(df['prediksi'].value_counts())
-st.bar_chart(df['prediksi'].value_counts())
+        # Tampilkan seluruh hasil
+        st.success("✅ Prediksi selesai.")
+        st.dataframe(df[['nama_dokter', 'kota', 'spesialisasi', 'prediksi']])
 
-# Tampilkan seluruh hasil
-st.success("✅ Prediksi selesai.")
-st.dataframe(df[['nama_dokter', 'kota', 'spesialisasi', 'prediksi']])
+        # Tampilkan hanya dokter yang beli
+        df_beli = df[df['prediksi'] == 1]
+        st.subheader("🧾 Dokter yang Diprediksi Akan Membeli")
+        if df_beli.empty:
+            st.warning("Tidak ada dokter yang diprediksi akan membeli.")
+        else:
+            st.dataframe(df_beli[['nama_dokter', 'kota', 'spesialisasi', 'nilai_sponsor_juta_rp', 'prediksi']])
+            csv_beli = df_beli.to_csv(index=False).encode('utf-8')
+            st.download_button("⬇️ Download hanya dokter yang beli", data=csv_beli, file_name="dokter_yang_beli.csv", mime='text/csv')
 
-# Tampilkan hanya dokter yang beli
-df_beli = df[df['prediksi'] == 1]
-st.subheader("🧾 Dokter yang Diprediksi Akan Membeli")
-if df_beli.empty:
-    st.warning("Tidak ada dokter yang diprediksi akan membeli.")
-else:
-    st.dataframe(df_beli[['nama_dokter', 'kota', 'spesialisasi', 'nilai_sponsor_juta_rp', 'prediksi']])
-    csv_beli = df_beli.to_csv(index=False).encode('utf-8')
-    st.download_button("⬇️ Download hanya dokter yang beli", data=csv_beli, file_name="dokter_yang_beli.csv", mime='text/csv')
+        # Tombol download semua hasil
+        csv = df.to_csv(index=False).encode('utf-8')
+        st.download_button("⬇️ Download semua hasil", data=csv, file_name="prediksi_dokter.csv", mime='text/csv')
 
-# Tombol download semua hasil
-csv = df.to_csv(index=False).encode('utf-8')
-st.download_button("⬇️ Download semua hasil", data=csv, file_name="prediksi_dokter.csv", mime='text/csv')
+    except Exception as e:
+        st.error(f"❌ Terjadi kesalahan saat memproses: {e}")
