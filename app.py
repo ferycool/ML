@@ -59,14 +59,24 @@ if uploaded_file:
 
         df_features = df_features[used_features]  # Urutkan sesuai fitur training
 
-        # --- Prediksi ---
-        df['prediksi'] = model.predict(df_features)
+      # --- Prediksi ---
+df['prediksi'] = model.predict(df_features)
 
-        st.success("✅ Prediksi selesai.")
-        st.dataframe(df[['nama_dokter', 'kota', 'spesialisasi', 'prediksi']])
+st.success("✅ Prediksi selesai.")
+st.dataframe(df[['nama_dokter', 'kota', 'spesialisasi', 'prediksi']])
 
-        csv = df.to_csv(index=False).encode('utf-8')
-        st.download_button("⬇️ Download hasil prediksi", data=csv, file_name="prediksi_dokter.csv", mime='text/csv')
+# Tambahan: tampilkan hanya dokter yang beli
+df_beli = df[df['prediksi'] == 1]
 
-    except Exception as e:
-        st.error(f"❌ Terjadi kesalahan saat memproses: {e}")
+st.subheader("🧾 Dokter yang Diprediksi Akan Membeli")
+if df_beli.empty:
+    st.warning("Tidak ada dokter yang diprediksi akan membeli.")
+else:
+    st.dataframe(df_beli[['nama_dokter', 'kota', 'spesialisasi', 'nilai_sponsor_juta_rp', 'prediksi']])
+
+    csv_beli = df_beli.to_csv(index=False).encode('utf-8')
+    st.download_button("⬇️ Download hanya dokter yang beli", data=csv_beli, file_name="dokter_yang_beli.csv", mime='text/csv')
+
+# Tombol download semua hasil
+csv = df.to_csv(index=False).encode('utf-8')
+st.download_button("⬇️ Download semua hasil", data=csv, file_name="prediksi_dokter.csv", mime='text/csv')
