@@ -4,7 +4,7 @@ import joblib
 
 @st.cache_resource
 def load_model():
-    return joblib.load("best_model_phs.pkl")
+    return joblib.load("retrained_gradient_boosting_model.pkl")
 
 model = load_model()
 
