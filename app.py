@@ -5,7 +5,7 @@ import joblib
 # Load model
 @st.cache_resource
 def load_model():
-    return joblib.load("model_phs.pkl")  # Pastikan file ini di-upload di root folder
+    return joblib.load("best_model_phs.pkl")  # Pastikan file ini di-upload di root folder
 
 model = load_model()
 
